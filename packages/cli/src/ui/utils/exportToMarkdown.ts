@@ -7,7 +7,7 @@
 import {
     Content,
 } from '@google/genai';
-import { writeFile} from 'fs/promises';
+import fs from 'fs/promises';
 
 
 const ROLE_DISPLAY: Record<string, string> = {
@@ -33,7 +33,7 @@ export async function exportToMarkdown(
     const filename = `chat_${tag || Date.now()}.md`;
     
     try {
-        await writeFile(filename, markdownContent, 'utf8');
+        await fs.writeFile(filename, markdownContent, 'utf8');
         return filename;
     } catch (error) {
         console.error(`Failed to write markdown file: ${error}`);
