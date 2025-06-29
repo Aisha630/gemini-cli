@@ -103,6 +103,7 @@ describe('useSlashCommandProcessor', () => {
   let mockGeminiClient: GeminiClient;
   let mockConfig: Config;
   let mockCorgiMode: ReturnType<typeof vi.fn>;
+  let mockPrivacyNotice: ReturnType<typeof vi.fn>;
   const mockUseSessionStats = useSessionStats as Mock;
 
   beforeEach(() => {
@@ -145,6 +146,7 @@ describe('useSlashCommandProcessor', () => {
         },
       },
     });
+    mockPrivacyNotice = vi.fn();
 
     (open as Mock).mockClear();
     mockProcessExit.mockClear();
@@ -177,6 +179,7 @@ describe('useSlashCommandProcessor', () => {
         mockCorgiMode,
         showToolDescriptions,
         mockSetQuittingMessages,
+        mockPrivacyNotice,
       ),
     );
   };
@@ -369,6 +372,7 @@ describe('useSlashCommandProcessor', () => {
           mockCorgiMode,
           false,
           mockSetQuittingMessages,
+          mockPrivacyNotice,
         ),
       );
 
@@ -773,7 +777,7 @@ describe('useSlashCommandProcessor', () => {
     beforeEach(() => {
       // Mock the core module with getMCPServerStatus and getMCPDiscoveryState
       vi.mock('@google/gemini-cli-core', async (importOriginal) => {
-        const actual = await importOriginal();
+        const actual = await importOriginal() as object;
         return {
           ...actual,
           MCPServerStatus: {
