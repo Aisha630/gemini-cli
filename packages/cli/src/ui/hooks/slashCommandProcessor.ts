@@ -33,6 +33,7 @@ import { GIT_COMMIT_INFO } from '../../generated/git-commit.js';
 import { formatDuration, formatMemoryUsage } from '../utils/formatters.js';
 import { getCliVersion } from '../../utils/version.js';
 import { LoadedSettings } from '../../config/settings.js';
+import { exportToMarkdown } from '../utils/exportToMarkdown.js';
 
 export interface SlashCommandActionReturn {
   shouldScheduleTool?: boolean;
@@ -723,6 +724,26 @@ export const useSlashCommandProcessor = (
                   content: 'No conversation found to save.',
                   timestamp: new Date(),
                 });
+              }
+              return;
+            }
+            case 'export': {
+              const history = chat.getHistory();
+              if (history.length > 0) {
+                const exported_filename = await exportToMarkdown(history, tag);
+                if (exported_filename) {
+                  addMessage({
+                    type: MessageType.INFO,
+                    content: `Conversation exported as ${exported_filename}.`,
+                    timestamp: new Date(),
+                  });
+                } else {
+                  addMessage({
+                    type: MessageType.ERROR,
+                    content: 'Failed to export conversation.',
+                    timestamp: new Date(),
+                  });
+                }
               }
               return;
             }
