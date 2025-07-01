@@ -7,6 +7,7 @@
 import React from 'react';
 import { Text, Box } from 'ink';
 import { Colors } from '../colors.js';
+import { RenderInline } from './InlineRenderer.js';
 
 interface TableRendererProps {
   headers: string[];
@@ -40,44 +41,84 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
     Math.floor(width * scaleFactor),
   );
 
-  const renderCell = (content: string, width: number, isHeader = false) => {
-    // The actual space for content inside the padding
-    const contentWidth = Math.max(0, width - 2);
+  // Helper function to calculate the wrapped height of text
+  // Here, raw, pre-markdown text is used while InlineRenderer applies the markdown style, removing the markdown syntax. This can lead to small inconsistencies in height calculation. However, it is alright since the length of actual content is usually much larger than the markdown syntax. So the height difference is negligible.
+  const getWrappedHeight = (text: string, width: number): number => {
 
-    let cellContent = content;
-    if (content.length > contentWidth) {
-      if (contentWidth <= 3) {
-        // Not enough space for '...'
-        cellContent = content.substring(0, contentWidth);
+    if (width <= 0) return 1;
+    const lines = text.split('\n');
+    let totalLines = 0;
+
+    for (const line of lines) {
+      if (line.length === 0) {
+        totalLines += 1;
       } else {
-        cellContent = content.substring(0, contentWidth - 3) + '...';
+        totalLines += Math.ceil(line.length / width);
       }
     }
 
-    // Pad the content to fill the cell
-    const padded = cellContent.padEnd(contentWidth, ' ');
-
-    if (isHeader) {
-      return (
-        <Text bold color={Colors.AccentCyan}>
-          {padded}
-        </Text>
-      );
-    }
-    return <Text>{padded}</Text>;
+    return Math.max(1, totalLines);
   };
 
-  const renderRow = (cells: string[], isHeader = false) => (
-    <Box flexDirection="row">
-      <Text>│ </Text>
-      {cells.map((cell, index) => (
-        <React.Fragment key={index}>
-          {renderCell(cell, adjustedWidths[index] || 0, isHeader)}
-          <Text> │ </Text>
-        </React.Fragment>
-      ))}
-    </Box>
-  );
+  // Helper function to get the height of a row (max height among all cells)
+  const getRowHeight = (cells: string[]): number =>
+    Math.max(
+      ...cells.map((cell, index) => {
+        const contentWidth = Math.max(0, (adjustedWidths[index] || 0) - 2);
+        return getWrappedHeight(cell, contentWidth);
+      }),
+    );
+
+  const renderCell = (
+    content: string,
+    width: number,
+    height: number,
+    isHeader = false,
+  ) => {
+    // The actual space for content inside the padding
+    const contentWidth = Math.max(0, width - 2);
+
+    // Apply inline rendering first
+    const textComponent = isHeader ? (
+      <Text bold color={Colors.AccentCyan}>
+        <RenderInline text={content} />
+      </Text>
+    ) : (
+      <Text>
+        <RenderInline text={content} />
+      </Text>
+    );
+
+    return (
+      <Box width={contentWidth} height={height} flexDirection="column">
+        {textComponent}
+      </Box>
+    );
+  };
+
+  const renderRow = (cells: string[], isHeader = false) => {
+    const rowHeight = getRowHeight(cells);
+
+    return (
+      <Box flexDirection="row" height={rowHeight}>
+        <Box flexDirection="column" justifyContent="space-between">
+          {Array.from({ length: rowHeight }, (_, i) => (
+            <Text key={i}>│ </Text>
+          ))}
+        </Box>
+        {cells.map((cell, index) => (
+          <React.Fragment key={index}>
+            {renderCell(cell, adjustedWidths[index] || 0, rowHeight, isHeader)}
+            <Box flexDirection="column" justifyContent="space-between">
+              {Array.from({ length: rowHeight }, (_, i) => (
+                <Text key={i}> │ </Text>
+              ))}
+            </Box>
+          </React.Fragment>
+        ))}
+      </Box>
+    );
+  };
 
   const renderSeparator = () => {
     const separator = adjustedWidths
