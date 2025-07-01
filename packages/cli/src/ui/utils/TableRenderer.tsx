@@ -42,23 +42,18 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   );
 
   // Helper function to calculate the wrapped height of text
-  // Since we're using RenderInline for actual rendering, we approximate the rendered width
-  // by keeping markdown content but adjusting for common patterns
+  // Here, raw, pre-markdown text is used. So we will just strip the markdown symbols and calculate the height based on the remaining text.
   const getWrappedHeight = (text: string, width: number): number => {
-    if (width <= 0) return 1;
-
-    // For height calculation, we keep the markdown symbols but make some adjustments
-    // to better approximate the final rendered width
-    const adjustedText = text
-      // Links: [text](url) becomes "text (url)" - usually longer
+    const strippedText = text
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/_(.*?)_/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      .replace(/~~(.*?)~~/g, '$1')
+      .replace(/`+(.+?)`+/g, '$1')
       .replace(/\[(.*?)\]\((.*?)\)/g, '$1 ($2)')
-      // Code blocks with multiple backticks: normalize to single content
-      .replace(/`{2,}(.+?)`{2,}/g, '$1');
-    // Keep other markdown symbols as they contribute to character width
-    // Bold (**text**), italic (*text*), strikethrough (~~text~~), etc.
-    // are kept as-is since they affect character width during calculation
+      .replace(/<u>(.*?)<\/u>/g, '$1');
 
-    const lines = adjustedText.split('\n');
+    const lines = strippedText.split('\n');
     let totalLines = 0;
 
     for (const line of lines) {
@@ -92,17 +87,17 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
 
     // Apply inline rendering first
     const textComponent = isHeader ? (
-      <Text bold color={Colors.AccentCyan} wrap="wrap">
+      <Text bold color={Colors.AccentCyan}>
         <RenderInline text={content} />
       </Text>
     ) : (
-      <Text wrap="wrap">
+      <Text>
         <RenderInline text={content} />
       </Text>
     );
 
     return (
-      <Box width={contentWidth} flexDirection="column" minHeight={height}>
+      <Box width={contentWidth} height={height} flexDirection="column">
         {textComponent}
       </Box>
     );
@@ -112,15 +107,19 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
     const rowHeight = getRowHeight(cells);
 
     return (
-      <Box flexDirection="row" minHeight={rowHeight}>
-        <Box flexDirection="column" justifyContent="flex-start">
-          <Text>│ </Text>
+      <Box flexDirection="row" height={rowHeight}>
+        <Box flexDirection="column" justifyContent="space-between">
+          {Array.from({ length: rowHeight }, (_, i) => (
+            <Text key={i}>│ </Text>
+          ))}
         </Box>
         {cells.map((cell, index) => (
           <React.Fragment key={index}>
             {renderCell(cell, adjustedWidths[index] || 0, rowHeight, isHeader)}
-            <Box flexDirection="column" justifyContent="flex-start">
-              <Text> │ </Text>
+            <Box flexDirection="column" justifyContent="space-between">
+              {Array.from({ length: rowHeight }, (_, i) => (
+                <Text key={i}> │ </Text>
+              ))}
             </Box>
           </React.Fragment>
         ))}
