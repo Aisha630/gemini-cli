@@ -250,6 +250,18 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         return;
       }
 
+      // Alt+Backspace to delete word before cursor
+      if (key.meta && key.name === 'backspace') {
+        buffer.deleteWordLeft();
+        return;
+      }
+
+      // Alt+Delete to delete word after cursor
+      if (key.meta && key.name === 'delete') {
+        buffer.deleteWordRight();
+        return;
+      }
+
       // Core text editing from MultilineTextEditor's useInput
       if (key.ctrl && key.name === 'k') {
         buffer.killLineRight();
