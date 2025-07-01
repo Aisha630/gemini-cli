@@ -6,6 +6,7 @@
 
 import React from 'react';
 import { Text, Box } from 'ink';
+import stringWidth from 'string-width';
 import { Colors } from '../colors.js';
 import { RenderInline } from './InlineRenderer.js';
 
@@ -42,7 +43,6 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   );
 
   // Helper function to calculate the wrapped height of text
-  // Here, raw, pre-markdown text is used while InlineRenderer applies the markdown style, removing the markdown syntax. This can lead to small inconsistencies in height calculation. However, it is alright since the length of actual content is usually much larger than the markdown syntax. So the height difference is negligible.
   const getWrappedHeight = (text: string, width: number): number => {
     if (width <= 0) return 1;
     const lines = text.split('\n');
@@ -52,7 +52,7 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
       if (line.length === 0) {
         totalLines += 1;
       } else {
-        totalLines += Math.ceil(line.length / width);
+        totalLines += Math.ceil(stringWidth(line) / width);
       }
     }
 
@@ -98,21 +98,17 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   const renderRow = (cells: string[], isHeader = false) => {
     const rowHeight = getRowHeight(cells);
 
+    const VerticalSeparator = ({ content }: { content: string }) => (
+      <Text>{Array.from({ length: rowHeight }, () => content).join('\n')}</Text>
+    );
+
     return (
       <Box flexDirection="row" height={rowHeight}>
-        <Box flexDirection="column" justifyContent="space-between">
-          {Array.from({ length: rowHeight }, (_, i) => (
-            <Text key={i}>│ </Text>
-          ))}
-        </Box>
+        <VerticalSeparator content="│ " />
         {cells.map((cell, index) => (
           <React.Fragment key={index}>
             {renderCell(cell, adjustedWidths[index] || 0, rowHeight, isHeader)}
-            <Box flexDirection="column" justifyContent="space-between">
-              {Array.from({ length: rowHeight }, (_, i) => (
-                <Text key={i}> │ </Text>
-              ))}
-            </Box>
+            <VerticalSeparator content=" │ " />
           </React.Fragment>
         ))}
       </Box>
