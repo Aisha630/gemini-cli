@@ -94,7 +94,7 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
               {codeMatch[2]}
             </Text>
           );
-        }
+        } 
       } else if (
         fullMatch.startsWith('[') &&
         fullMatch.includes('](') &&

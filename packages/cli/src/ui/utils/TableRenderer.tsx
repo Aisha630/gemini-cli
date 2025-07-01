@@ -41,50 +41,77 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
     Math.floor(width * scaleFactor),
   );
 
-  const renderCell = (content: string, width: number, isHeader = false) => {
+  // Helper function to calculate the wrapped height of text
+  const getWrappedHeight = (text: string, width: number): number => {
+    if (width <= 0) return 1;
+    const lines = text.split('\n');
+    let totalLines = 0;
+    
+    for (const line of lines) {
+      if (line.length === 0) {
+        totalLines += 1;
+      } else {
+        totalLines += Math.ceil(line.length / width);
+      }
+    }
+    
+    return Math.max(1, totalLines);
+  };
+
+  // Helper function to get the height of a row (max height among all cells)
+  const getRowHeight = (cells: string[]): number =>
+    Math.max(
+      ...cells.map((cell, index) => {
+        const contentWidth = Math.max(0, (adjustedWidths[index] || 0) - 2);
+        return getWrappedHeight(cell, contentWidth);
+      })
+    );
+
+  const renderCell = (content: string, width: number, height: number, isHeader = false) => {
     // The actual space for content inside the padding
     const contentWidth = Math.max(0, width - 2);
 
-    let cellContent = content;
-    if (content.length > contentWidth) {
-      if (contentWidth <= 3) {
-        // Not enough space for '...'
-        cellContent = content.substring(0, contentWidth);
-      } else {
-        cellContent = content.substring(0, contentWidth - 3) + '...';
-      }
-    }
-
     // Apply inline rendering first
-    if (isHeader) {
-      return (
-        <Box width={contentWidth}>
-          <Text bold color={Colors.AccentCyan}>
-            <RenderInline text={cellContent} />
-          </Text>
-        </Box>
-      );
-    }
+    const textComponent = isHeader ? (
+      <Text bold color={Colors.AccentCyan}>
+        <RenderInline text={content} />
+      </Text>
+    ) : (
+      <Text>
+        <RenderInline text={content} />
+      </Text>
+    );
+
     return (
-      <Box width={contentWidth}>
-        <Text>
-          <RenderInline text={cellContent} />
-        </Text>
+      <Box width={contentWidth} height={height} flexDirection="column">
+        {textComponent}
       </Box>
     );
   };
 
-  const renderRow = (cells: string[], isHeader = false) => (
-    <Box flexDirection="row">
-      <Text>│ </Text>
-      {cells.map((cell, index) => (
-        <React.Fragment key={index}>
-          {renderCell(cell, adjustedWidths[index] || 0, isHeader)}
-          <Text> │ </Text>
-        </React.Fragment>
-      ))}
-    </Box>
-  );
+  const renderRow = (cells: string[], isHeader = false) => {
+    const rowHeight = getRowHeight(cells);
+    
+    return (
+      <Box flexDirection="row" height={rowHeight}>
+        <Box flexDirection="column" justifyContent="space-between">
+          {Array.from({ length: rowHeight }, (_, i) => (
+            <Text key={i}>│ </Text>
+          ))}
+        </Box>
+        {cells.map((cell, index) => (
+          <React.Fragment key={index}>
+            {renderCell(cell, adjustedWidths[index] || 0, rowHeight, isHeader)}
+            <Box flexDirection="column" justifyContent="space-between">
+              {Array.from({ length: rowHeight }, (_, i) => (
+                <Text key={i}> │ </Text>
+              ))}
+            </Box>
+          </React.Fragment>
+        ))}
+      </Box>
+    );
+  };
 
   const renderSeparator = () => {
     const separator = adjustedWidths
