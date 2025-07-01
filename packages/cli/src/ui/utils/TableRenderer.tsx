@@ -7,6 +7,7 @@
 import React from 'react';
 import { Text, Box } from 'ink';
 import { Colors } from '../colors.js';
+import { RenderInline } from './InlineRenderer.js';
 
 interface TableRendererProps {
   headers: string[];
@@ -54,17 +55,23 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
       }
     }
 
-    // Pad the content to fill the cell
-    const padded = cellContent.padEnd(contentWidth, ' ');
-
+    // Apply inline rendering first
     if (isHeader) {
       return (
-        <Text bold color={Colors.AccentCyan}>
-          {padded}
-        </Text>
+        <Box width={contentWidth}>
+          <Text bold color={Colors.AccentCyan}>
+            <RenderInline text={cellContent} />
+          </Text>
+        </Box>
       );
     }
-    return <Text>{padded}</Text>;
+    return (
+      <Box width={contentWidth}>
+        <Text>
+          <RenderInline text={cellContent} />
+        </Text>
+      </Box>
+    );
   };
 
   const renderRow = (cells: string[], isHeader = false) => (
