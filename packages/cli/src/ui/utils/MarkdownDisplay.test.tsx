@@ -278,3 +278,36 @@ console.log(x);
     });
   });
 });
+describe('Table Rendering Styles', () => {
+  it('should strip bold markers inside table cells', () => {
+    const boldTable = `
+  | Col | Desc          |
+  |-----|---------------|
+  | **Foo** | Bar       |
+  `;
+    const { lastFrame } = render(
+      <MarkdownDisplay text={boldTable} isPending={false} terminalWidth={80} />,
+    );
+    const output = lastFrame();
+    expect(output).not.toContain('**Foo**');
+    expect(output).toContain('Foo');
+  });
+
+  it('should strip italic markers inside table cells', () => {
+    const italicTable = `
+  | Col | Desc          |
+  |-----|---------------|
+  | *Foo* | Bar        |
+  `;
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={italicTable}
+        isPending={false}
+        terminalWidth={80}
+      />,
+    );
+    const output = lastFrame();
+    expect(output).not.toContain('*Foo*');
+    expect(output).toContain('Foo');
+  });
+});
