@@ -127,7 +127,7 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
           </Text>
         );
       } else if (fullMatch === '<br>') {
-        renderedNode = <Text key={key}>{"\n"}</Text>;
+        renderedNode = <Text key={key}>{'\n'}</Text>;
       }
     } catch (e) {
       console.error('Error parsing inline markdown part:', fullMatch, e);

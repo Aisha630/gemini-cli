@@ -232,96 +232,267 @@ But there's no separator line
       const { lastFrame } = renderNarrow();
       expect(lastFrame()).not.toBe('');
     });
-
-    it('should handle inline markdown in tables', () => {
-      // Test content from MarkdownDisplay.demo.tsx
-      const testContent = `
-# execSync vs spawn
-
-| Characteristic | \`execSync\` (Old Way) | \`spawn\` (New Way in PR) |
-|----------------|------------------------|---------------------------|
-| **Execution** | Synchronous (blocks everything) | Asynchronous (non-blocking) |
-| **I/O Handling** | Buffers entire output in memory | Streams data in chunks (memory efficient) |
-| **Security** | **Vulnerable to shell injection** | **Safe from shell injection** |
-| **Use Case** | Simple, quick commands with small, trusted... | Long-running processes, large I/O, and especially for running user-configur... |
-
-`;
-
-      const { lastFrame } = render(
-        <MarkdownDisplay
-          text={testContent}
-          isPending={false}
-          terminalWidth={120}
-        />,
-      );
-
-      const output = lastFrame();
-
-      // Check header
-      expect(output).toContain('execSync vs spawn');
-
-      // Check table headers - handle possible truncation
-      expect(output).toMatch(/Cha(racteristic)?/); // Match "Cha" or "Characteristic"
-      expect(output).toContain('execSync');
-      expect(output).toContain('spawn');
-
-      // Check table content - test keywords rather than full sentences
-      expect(output).toMatch(/Exe(cution)?/); // Match "Exe" or "Execution"
-      expect(output).toContain('Synchronous');
-      expect(output).toContain('Asynchronous');
-      expect(output).toMatch(/I\/O|Handling/); // Match "I/O" or "Handling"
-      expect(output).toContain('Buffers');
-      expect(output).toContain('Streams');
-      expect(output).toMatch(/Sec(urity)?/); // Match "Sec" or "Security"
-      expect(output).toContain('Vulnerable');
-      expect(output).toContain('Safe');
-      expect(output).toMatch(/Use|Case/); // Match "Use" or "Case"
-      expect(output).toContain('Simple');
-      expect(output).toContain('Long-running');
-    });
   });
+});
 
-  describe('Existing Functionality', () => {
-    it('should render headers correctly', () => {
-      const headerMarkdown = `
+describe('Existing Functionality', () => {
+  it('should render headers correctly', () => {
+    const headerMarkdown = `
 # H1 Header
 ## H2 Header
 ### H3 Header
 #### H4 Header
 `;
 
-      const { lastFrame } = render(
-        <MarkdownDisplay
-          text={headerMarkdown}
-          isPending={false}
-          terminalWidth={80}
-        />,
-      );
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={headerMarkdown}
+        isPending={false}
+        terminalWidth={80}
+      />,
+    );
 
-      expect(lastFrame()).toContain('H1 Header');
-      expect(lastFrame()).toContain('H2 Header');
-      expect(lastFrame()).toContain('H3 Header');
-      expect(lastFrame()).toContain('H4 Header');
-    });
+    expect(lastFrame()).toContain('H1 Header');
+    expect(lastFrame()).toContain('H2 Header');
+    expect(lastFrame()).toContain('H3 Header');
+    expect(lastFrame()).toContain('H4 Header');
+  });
 
-    it('should render code blocks correctly', () => {
-      const codeMarkdown = `
+  it('should render code blocks correctly', () => {
+    const codeMarkdown = `
 \`\`\`javascript
 const x = 42;
 console.log(x);
 \`\`\`
 `;
 
-      const { lastFrame } = render(
-        <MarkdownDisplay
-          text={codeMarkdown}
-          isPending={false}
-          terminalWidth={80}
-        />,
-      );
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={codeMarkdown}
+        isPending={false}
+        terminalWidth={80}
+      />,
+    );
 
-      expect(lastFrame()).toContain('const x = 42;');
-      expect(lastFrame()).toContain('console.log(x);');
-    });
+    expect(lastFrame()).toContain('const x = 42;');
+    expect(lastFrame()).toContain('console.log(x);');
+  });
+});
+
+describe('Table Rendering Styles', () => {
+  it('should render bold markdown inside table cells', () => {
+    const boldTable = `
+    | Col | Desc          |
+    |-----|---------------|
+    | **Foo** | Bar       |
+    `;
+    const { lastFrame } = render(
+      <MarkdownDisplay text={boldTable} isPending={false} terminalWidth={80} />,
+    );
+    const output = lastFrame();
+    // Markdown symbols should not appear in the rendered output
+    expect(output).not.toContain('**Foo**');
+    // The content should be present (without the markdown symbols)
+    expect(output).toContain('Foo');
+    expect(output).toContain('Bar');
+    // Verify table structure is maintained
+    expect(output).toContain('Col');
+    expect(output).toContain('Desc');
+  });
+
+  it('should render italic markdown inside table cells', () => {
+    const italicTable = `
+    | Col | Desc          |
+    |-----|---------------|
+    | *Foo* | Bar        |
+    `;
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={italicTable}
+        isPending={false}
+        terminalWidth={80}
+      />,
+    );
+    const output = lastFrame();
+    // Markdown symbols should not appear in the rendered output
+    expect(output).not.toContain('*Foo*');
+    // The content should be present (without the markdown symbols)
+    expect(output).toContain('Foo');
+    expect(output).toContain('Bar');
+    // Verify table structure is maintained
+    expect(output).toContain('Col');
+    expect(output).toContain('Desc');
+  });
+
+  it('should render multiple markdown formats in table cells', () => {
+    const complexTable = `
+    | Format | Example | Notes |
+    |--------|---------|-------|
+    | **Bold** | *Italic* | \`Code\` |
+    | ~~Strike~~ | [Link](url) | <u>Underline</u> |
+    `;
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={complexTable}
+        isPending={false}
+        terminalWidth={100}
+      />,
+    );
+    const output = lastFrame();
+
+    expect(output).not.toContain('**Bold**');
+    expect(output).not.toContain('*Italic*');
+    expect(output).not.toContain('`Code`');
+    expect(output).not.toContain('~~Strike~~');
+    expect(output).not.toContain('[Link](url)');
+    expect(output).not.toContain('<u>Underline</u>');
+
+    expect(output).toContain('Bold');
+    expect(output).toContain('Italic');
+    expect(output).toContain('Code');
+    expect(output).toContain('Strike');
+    expect(output).toContain('Link');
+    expect(output).toContain('Underline');
+
+    expect(output).toContain('Format');
+    expect(output).toContain('Example');
+    expect(output).toContain('Notes');
+  });
+
+  it('should handle line breaks in table cells', () => {
+    const tableWithBreaks = `
+| Name | Description |
+|------|-------------|
+| Item 1 | First line<br>Second line |
+| Item 2 | Another line<br>With break |
+`;
+
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={tableWithBreaks}
+        isPending={false}
+        terminalWidth={80}
+      />,
+    );
+
+    const output = lastFrame();
+    expect(output).toContain('First line');
+    expect(output).toContain('Second line');
+    expect(output).toContain('Another line');
+    expect(output).toContain('With break');
+    // Should not contain the raw <br> tag
+    expect(output).not.toContain('<br>');
+  });
+
+  it('should handle multiple line breaks in table cells', () => {
+    const tableWithMultipleBreaks = `
+| Column |
+|--------|
+| Line 1<br>Line 2<br>Line 3 |
+`;
+
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={tableWithMultipleBreaks}
+        isPending={false}
+        terminalWidth={80}
+      />,
+    );
+
+    const output = lastFrame();
+    expect(output).toContain('Line 1');
+    expect(output).toContain('Line 2');
+    expect(output).toContain('Line 3');
+  });
+
+  it('should respect minimum column width in very narrow terminals', () => {
+    const narrowTable = `
+| A | B | C |
+|---|---|---|
+| 1 | 2 | 3 |
+`;
+
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={narrowTable}
+        isPending={false}
+        terminalWidth={10} // Very narrow
+      />,
+    );
+
+    const output = lastFrame();
+    expect(output).toContain('A');
+    expect(output).toContain('B');
+    expect(output).toContain('C');
+    expect(output).toContain('1');
+    expect(output).toContain('2');
+    expect(output).toContain('3');
+  });
+
+  it('should maintain table structure even with single character columns', () => {
+    const singleCharTable = `
+| X | Y | Z |
+|---|---|---|
+| a | b | c |
+`;
+
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={singleCharTable}
+        isPending={false}
+        terminalWidth={15}
+      />,
+    );
+
+    const output = lastFrame();
+    // Should still render as a proper table
+    expect(output).toContain('│');
+    expect(output).toContain('─');
+  });
+
+  it('should properly wrap long text in table cells', () => {
+    const longTextTable = `
+| SHORT | Very Long Content |
+|-------|-------------------|
+| A     | This is a very long piece of text that should wrap properly within the cell boundaries |
+`;
+
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={longTextTable}
+        isPending={false}
+        terminalWidth={50}
+      />,
+    );
+
+    const output = lastFrame();
+    expect(output).toContain('This is a very long');
+    expect(output).toContain('S');
+    expect(output).toContain('H');
+    expect(output).toContain('O');
+    expect(output).toContain('R');
+    expect(output).toContain('T');
+    expect(output).toContain('A');
+  });
+
+  it('should handle newlines and breaks together in wrapping', () => {
+    const mixedBreaksTable = `
+| Content |
+|---------|
+| Line 1\nLine 2<br>Line 3 |
+`;
+
+    const { lastFrame } = render(
+      <MarkdownDisplay
+        text={mixedBreaksTable}
+        isPending={false}
+        terminalWidth={80}
+      />,
+    );
+
+    const output = lastFrame();
+    expect(output).toContain('Line 1');
+    expect(output).toContain('Line 2');
+    expect(output).toContain('Line 3');
   });
 });

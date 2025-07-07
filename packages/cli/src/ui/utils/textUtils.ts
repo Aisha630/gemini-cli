@@ -67,3 +67,13 @@ export function cpSlice(str: string, start: number, end?: number): string {
   const arr = toCodePoints(str).slice(start, end);
   return arr.join('');
 }
+
+export function wrappedLineCount(text: string, width: number): number {
+  if (width <= 0) return 1;
+  const lines = text.split(/\n|<br\s*\/?>/gi);
+  let sum = 0;
+  for (const line of lines) {
+    sum += Math.ceil(cpLen(line) / width);
+  }
+  return Math.max(1, sum);
+}

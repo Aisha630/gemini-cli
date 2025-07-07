@@ -4,9 +4,9 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useCallback } from 'react';
+import React from 'react';
 import { Text, Box } from 'ink';
-import stringWidth from 'string-width';
+import { wrappedLineCount } from './textUtils.js';
 import { Colors } from '../colors.js';
 import { RenderInline } from './InlineMarkdownRenderer.js';
 
@@ -29,7 +29,7 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   const columnWidths = headers.map((header, index) => {
     const headerWidth = header.length;
     const maxRowWidth = Math.max(
-      ...rows.map((row) => stringWidth(row[index] || '')),
+      ...rows.map((row) => (row[index] || '').length),
     );
     return Math.max(headerWidth, maxRowWidth) + 2; // Add padding
   });
@@ -38,33 +38,24 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   const totalWidth = columnWidths.reduce((sum, width) => sum + width + 1, 1);
   const scaleFactor =
     totalWidth > terminalWidth ? terminalWidth / totalWidth : 1;
-    const minColWidth = 3;
-    const adjustedWidths = columnWidths.map((w) =>
-        Math.max(Math.floor(w * scaleFactor), minColWidth),
-    );
+  const minColWidth = 3;
+  const adjustedWidths = columnWidths.map((w) =>
+    Math.max(Math.floor(w * scaleFactor), minColWidth),
+  );
 
-  // Helper function to calculate the wrapped height of text
-  const getWrappedHeight = useCallback((text: string, width: number) => {
-    if (width <= 0) return 1;
-    const lines = text.split(/\n|<br\s*\/?>/gi);
-    let totalLines = 0;
-    for (const line of lines) {
-      totalLines += Math.ceil(stringWidth(line) / width);
-    }
-    return Math.max(1, totalLines);
-  }, []); 
+  const headerHeight = Math.max(
+    1,
+    ...headers.map((hdr, ci) => wrappedLineCount(hdr, adjustedWidths[ci] - 2)),
+  );
 
-  // Helper function to get the height of a row (max height among all cells)
-  const getRowHeight = useCallback(
-    (cells: string[]) : number => {
-      return Math.max(
-        ...cells.map((cell: string, index: number) => {
-          const contentWidth = Math.max(0, adjustedWidths[index] - 2);
-          return getWrappedHeight(cell, contentWidth);
-        }),
-      );
-    },
-    [adjustedWidths, getWrappedHeight], 
+  // Row Height after taking into account wrapped content
+  const rowHeights = rows.map((cells) =>
+    Math.max(
+      1,
+      ...cells.map((cell, ci) =>
+        wrappedLineCount(cell, adjustedWidths[ci] - 2),
+      ),
+    ),
   );
 
   const renderCell = (
@@ -93,27 +84,31 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
     );
   };
 
-  const VerticalSeparator = React.memo(
-    ({ content, rowHeight }: { content: string; rowHeight: number }) => (
-      <Text>{Array.from({ length: rowHeight }, () => content).join('\n')}</Text>
-    ),
-  );
-
-  const renderRow = (cells: string[], isHeader = false) => {
-    const rowHeight = getRowHeight(cells);
-
+  function VerticalSeparatorInternal({
+    content,
+    rowHeight,
+  }: {
+    content: string;
+    rowHeight: number;
+  }) {
     return (
-      <Box flexDirection="row" height={rowHeight + 1}>
-        <VerticalSeparator content="│ " rowHeight={rowHeight + 1} />
-        {cells.map((cell, index) => (
-          <React.Fragment key={index}>
-            {renderCell(cell, adjustedWidths[index], rowHeight, isHeader)}
-            <VerticalSeparator content=" │ " rowHeight={rowHeight + 1} />
-          </React.Fragment>
-        ))}
-      </Box>
+      <Text>{Array.from({ length: rowHeight }, () => content).join('\n')}</Text>
     );
-  };
+  }
+
+  const VerticalSeparator = React.memo(VerticalSeparatorInternal);
+
+  const renderRow = (cells: string[], height: number, isHeader = false) => (
+    <Box flexDirection="row" height={height + 1}>
+      <VerticalSeparator content="│ " rowHeight={height + 1} />
+      {cells.map((content, ci) => (
+        <React.Fragment key={ci}>
+          {renderCell(content, adjustedWidths[ci], height, isHeader)}
+          <VerticalSeparator content=" │ " rowHeight={height + 1} />
+        </React.Fragment>
+      ))}
+    </Box>
+  );
 
   const renderSeparator = () => {
     const separator = adjustedWidths
@@ -139,11 +134,9 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   return (
     <Box flexDirection="column" marginY={1}>
       {renderTopBorder()}
-      {renderRow(headers, true)}
+      {renderRow(headers, headerHeight, true)}
       {renderSeparator()}
-      {rows.map((row, index) => (
-        <React.Fragment key={index}>{renderRow(row)}</React.Fragment>
-      ))}
+      {rows.map((r, i) => renderRow(r, rowHeights[i]))}
       {renderBottomBorder()}
     </Box>
   );
