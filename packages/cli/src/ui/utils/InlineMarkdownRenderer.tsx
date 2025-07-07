@@ -7,7 +7,6 @@
 import React from 'react';
 import { Text } from 'ink';
 import { Colors } from '../colors.js';
-import stringWidth from 'string-width';
 
 // Constants for Markdown parsing
 const BOLD_MARKER_LENGTH = 2; // For "**"
@@ -25,7 +24,7 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
   const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
   const inlineRegex =
-    /(\*\*.*?\*\*|\*.*?\*|_.*?_|~~.*?~~|\[.*?\]\(.*?\)|`+.+?`+|<u>.*?<\/u>|<br>)/g;
+    /(\*\*.*?\*\*|\*.*?\*|_.*?_|~~.*?~~|\[.*?\]\(.*?\)|`+.+?`+|<u>.*?<\/u>|<br\s*\/?>)/gi;
   let match;
 
   while ((match = inlineRegex.exec(text)) !== null) {
@@ -126,7 +125,7 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
             )}
           </Text>
         );
-      } else if (fullMatch === '<br>') {
+      } else if (fullMatch.startsWith('<br')) {
         renderedNode = <Text key={key}>{'\n'}</Text>;
       }
     } catch (e) {
@@ -146,19 +145,3 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
 };
 
 export const RenderInline = React.memo(RenderInlineInternal);
-
-/**
- * Utility function to get the plain text length of a string with markdown formatting
- * This is useful for calculating column widths in tables
- */
-export const getPlainTextLength = (text: string): number => {
-  const cleanText = text
-    .replace(/\*\*(.*?)\*\*/g, '$1')
-    .replace(/\*(.*?)\*/g, '$1')
-    .replace(/_(.*?)_/g, '$1')
-    .replace(/~~(.*?)~~/g, '$1')
-    .replace(/`(.*?)`/g, '$1')
-    .replace(/<u>(.*?)<\/u>/g, '$1')
-    .replace(/\[(.*?)\]\(.*?\)/g, '$1');
-  return stringWidth(cleanText);
-};

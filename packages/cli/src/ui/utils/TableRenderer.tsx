@@ -6,7 +6,7 @@
 
 import React from 'react';
 import { Text, Box } from 'ink';
-import { wrappedLineCount } from './textUtils.js';
+import { wrappedLineCount, getPlainTextLength } from './textUtils.js';
 import { Colors } from '../colors.js';
 import { RenderInline } from './InlineMarkdownRenderer.js';
 
@@ -27,9 +27,9 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
 }) => {
   // Calculate column widths
   const columnWidths = headers.map((header, index) => {
-    const headerWidth = header.length;
+    const headerWidth = getPlainTextLength(header);
     const maxRowWidth = Math.max(
-      ...rows.map((row) => (row[index] || '').length),
+      ...rows.map((row) => getPlainTextLength(row[index] || '')),
     );
     return Math.max(headerWidth, maxRowWidth) + 2; // Add padding
   });
