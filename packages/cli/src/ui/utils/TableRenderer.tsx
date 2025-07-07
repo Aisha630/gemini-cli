@@ -4,7 +4,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React from 'react';
+import React, { useCallback } from 'react';
 import { Text, Box } from 'ink';
 import stringWidth from 'string-width';
 import { Colors } from '../colors.js';
@@ -29,7 +29,7 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   const columnWidths = headers.map((header, index) => {
     const headerWidth = header.length;
     const maxRowWidth = Math.max(
-      ...rows.map((row) => (row[index] || '').length),
+      ...rows.map((row) => stringWidth(row[index] || '')),
     );
     return Math.max(headerWidth, maxRowWidth) + 2; // Add padding
   });
@@ -38,33 +38,34 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
   const totalWidth = columnWidths.reduce((sum, width) => sum + width + 1, 1);
   const scaleFactor =
     totalWidth > terminalWidth ? terminalWidth / totalWidth : 1;
-  const adjustedWidths = columnWidths.map((width) =>
-    Math.floor(width * scaleFactor),
-  );
+    const minColWidth = 3;
+    const adjustedWidths = columnWidths.map((w) =>
+        Math.max(Math.floor(w * scaleFactor), minColWidth),
+    );
 
   // Helper function to calculate the wrapped height of text
-  const getWrappedHeight = (text: string, width: number): number => {
-    if (width <= 0) return 0;
-    const lines = text.split('\n');
+  const getWrappedHeight = useCallback((text: string, width: number) => {
+    if (width <= 0) return 1;
+    const lines = text.split(/\n|<br\s*\/?>/gi);
     let totalLines = 0;
-
     for (const line of lines) {
-      if (line.length) {
-        totalLines += Math.ceil(stringWidth(line) / width);
-      }
+      totalLines += Math.ceil(stringWidth(line) / width);
     }
-
     return Math.max(1, totalLines);
-  };
+  }, []); 
 
   // Helper function to get the height of a row (max height among all cells)
-  const getRowHeight = (cells: string[]): number =>
-    Math.max(
-      ...cells.map((cell, index) => {
-        const contentWidth = Math.max(0, adjustedWidths[index] - 2);
-        return getWrappedHeight(cell, contentWidth);
-      }),
-    );
+  const getRowHeight = useCallback(
+    (cells: string[]) : number => {
+      return Math.max(
+        ...cells.map((cell: string, index: number) => {
+          const contentWidth = Math.max(0, adjustedWidths[index] - 2);
+          return getWrappedHeight(cell, contentWidth);
+        }),
+      );
+    },
+    [adjustedWidths, getWrappedHeight], 
+  );
 
   const renderCell = (
     content: string,
@@ -75,7 +76,6 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
     // The actual space for content inside the padding
     const contentWidth = Math.max(0, width - 2);
 
-    // Apply inline rendering first
     const textComponent = isHeader ? (
       <Text bold color={Colors.AccentCyan}>
         <RenderInline text={content} />
@@ -107,7 +107,7 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
         <VerticalSeparator content="│ " rowHeight={rowHeight + 1} />
         {cells.map((cell, index) => (
           <React.Fragment key={index}>
-            {renderCell(cell, adjustedWidths[index] || 0, rowHeight, isHeader)}
+            {renderCell(cell, adjustedWidths[index], rowHeight, isHeader)}
             <VerticalSeparator content=" │ " rowHeight={rowHeight + 1} />
           </React.Fragment>
         ))}

@@ -25,7 +25,7 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
   const nodes: React.ReactNode[] = [];
   let lastIndex = 0;
   const inlineRegex =
-    /(\*\*.*?\*\*|\*.*?\*|_.*?_|~~.*?~~|\[.*?\]\(.*?\)|`+.+?`+|<u>.*?<\/u>)/g;
+    /(\*\*.*?\*\*|\*.*?\*|_.*?_|~~.*?~~|\[.*?\]\(.*?\)|`+.+?`+|<u>.*?<\/u>|<br>)/g;
   let match;
 
   while ((match = inlineRegex.exec(text)) !== null) {
@@ -126,6 +126,8 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
             )}
           </Text>
         );
+      } else if (fullMatch === '<br>') {
+        renderedNode = <Text key={key}>{"\n"}</Text>;
       }
     } catch (e) {
       console.error('Error parsing inline markdown part:', fullMatch, e);
