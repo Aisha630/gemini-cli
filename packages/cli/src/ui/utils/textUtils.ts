@@ -121,6 +121,9 @@ export function distributeWidth(widths: number[], toRemove: number): number[] {
         (availableReductions[i] / totalAvailable) * actualToRemove,
       );
       newWidths[i] -= reduction;
+      if ( newWidths[i]  > minimumWidth) {
+        newWidths[i] -= 1; // To account for flooring
+      }
     }
   }
 
