@@ -9,6 +9,8 @@
  * @param asciiArt The ASCII art string.
  * @returns The length of the longest line in the ASCII art.
  */
+import stringWidth from 'string-width';
+
 export const getAsciiArtWidth = (asciiArt: string): number => {
   if (!asciiArt) {
     return 0;
@@ -66,4 +68,30 @@ export function cpSlice(str: string, start: number, end?: number): string {
   // Slice by code‑point indices and re‑join.
   const arr = toCodePoints(str).slice(start, end);
   return arr.join('');
+}
+
+/**
+ * Utility function to get the plain text length of a string with markdown formatting
+ * This is useful for calculating column widths in tables
+ */
+export function getPlainTextLength(text: string): number {
+  const cleanText = text
+    .replace(/\*\*(.*?)\*\*/g, '$1')
+    .replace(/\*(.*?)\*/g, '$1')
+    .replace(/_(.*?)_/g, '$1')
+    .replace(/~~(.*?)~~/g, '$1')
+    .replace(/`(.*?)`/g, '$1')
+    .replace(/<u>(.*?)<\/u>/g, '$1')
+    .replace(/\[(.*?)\]\(.*?\)/g, '$1');
+  return stringWidth(cleanText);
+}
+
+export function wrappedLineCount(text: string, width: number): number {
+  if (width <= 0) return 1;
+  const lines = text.split(/\n|<br\s*\/?>/gi);
+  let sum = 0;
+  for (const line of lines) {
+    sum += Math.max(1, Math.ceil(getPlainTextLength(line) / width));
+  }
+  return Math.max(1, sum);
 }
