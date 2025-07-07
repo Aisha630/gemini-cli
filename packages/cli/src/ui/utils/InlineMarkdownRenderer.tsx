@@ -125,7 +125,7 @@ const RenderInlineInternal: React.FC<RenderInlineProps> = ({ text }) => {
             )}
           </Text>
         );
-      } else if (fullMatch.startsWith('<br')) {
+      } else if (fullMatch.toLowerCase().startsWith('<br')) {
         renderedNode = <Text key={key}>{'\n'}</Text>;
       }
     } catch (e) {
