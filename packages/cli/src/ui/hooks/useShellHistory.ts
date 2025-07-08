@@ -99,6 +99,11 @@ export function useShellHistory(projectRoot: string) {
   const getMatchingCommand = useCallback(
     (toMatch: string) => {
       const query = toMatch.trim();
+      if (!query) {
+        setMatchingCommands([]);
+        setMatchingIndex(-1);
+        return null;
+      }
       let matches: string[];
 
       try {
@@ -111,7 +116,12 @@ export function useShellHistory(projectRoot: string) {
       }
 
       setMatchingCommands(matches);
-      setMatchingIndex(matches.length > 0 ? 0 : -1);
+      if (matches.length > 0) {
+        setMatchingIndex(0);
+        return matches[0];
+      }
+      setMatchingIndex(-1);
+      return null;
     },
     [history],
   );
@@ -133,7 +143,7 @@ export function useShellHistory(projectRoot: string) {
     const newIndex = matchingIndex - 1;
     setMatchingIndex(newIndex);
     if (newIndex < 0) {
-      return '';
+      return null;
     }
     return matchingCommands[newIndex] ?? null;
   }, [matchingCommands, matchingIndex]);

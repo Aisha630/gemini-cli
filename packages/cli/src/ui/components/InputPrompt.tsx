@@ -54,6 +54,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   const [justNavigatedHistory, setJustNavigatedHistory] = useState(false);
   const [reverseSearchActive, setReverseSearchActive] = useState(false);
   const [reverseSearchQuery, setReverseSearchQuery] = useState('');
+  const [originalBufferText, setOriginalBufferText] = useState('');
 
   const completion = useCompletion(
     buffer.text,
@@ -197,6 +198,13 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       }
 
       if (key.name === 'escape') {
+        if (reverseSearchActive) {
+          setReverseSearchActive(false);
+          setReverseSearchQuery('');
+          buffer.setText(originalBufferText);
+          shellHistory.resetMatching();
+        }
+
         if (shellModeActive) {
           setShellModeActive(false);
           return;
@@ -266,8 +274,10 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
           // Shell History Navigation with reverse search
           if (key.name === 'r' && key.ctrl && !reverseSearchActive) {
             setReverseSearchActive(true);
-            setReverseSearchQuery(buffer.text);
-            shellHistory.getMatchingCommand(buffer.text);
+
+            setOriginalBufferText(buffer.text);
+            buffer.setText(''); // Clear the buffer for reverse search
+            setReverseSearchQuery('');
             return;
           }
 
@@ -276,7 +286,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
               setReverseSearchActive(false);
               shellHistory.resetMatching();
               setReverseSearchQuery('');
-              buffer.setText(reverseSearchQuery);
+              buffer.setText(originalBufferText);
               return;
             }
 
@@ -297,16 +307,21 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
             }
 
             if (key.name === 'backspace') {
-              const nextQuery = buffer.text.slice(0, -1);
+              const nextQuery = reverseSearchQuery.slice(0, -1);
               setReverseSearchQuery(nextQuery);
-              buffer.setText(nextQuery);
-              shellHistory.getMatchingCommand(nextQuery);
+              const match = shellHistory.getMatchingCommand(nextQuery);
+              if (match) {
+                buffer.setText(match);
+              } else {
+                buffer.setText('');
+              }
               return;
             }
 
             if (key.name === 'return') {
               setReverseSearchActive(false);
               setReverseSearchQuery('');
+              setOriginalBufferText('');
               shellHistory.resetMatching();
               handleSubmitAndClear(buffer.text.trim());
               return;
@@ -320,8 +335,12 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
             ) {
               const nextQuery = reverseSearchQuery + key.sequence;
               setReverseSearchQuery(nextQuery);
-              buffer.setText(nextQuery);
-              shellHistory.getMatchingCommand(nextQuery);
+              const match = shellHistory.getMatchingCommand(nextQuery);
+              if (match) {
+                buffer.setText(match);
+              } else {
+                buffer.setText('');
+              }
               return;
             }
             return;
@@ -398,6 +417,10 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       shellHistory,
       reverseSearchActive,
       reverseSearchQuery,
+      setReverseSearchActive,
+      setReverseSearchQuery,
+      originalBufferText,
+      setOriginalBufferText,
     ],
   );
 
@@ -418,7 +441,15 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         <Text
           color={shellModeActive ? Colors.AccentYellow : Colors.AccentPurple}
         >
-          {shellModeActive ? (reverseSearchActive ? '(r): ' : '! ') : '> '}
+          {shellModeActive ? (
+            reverseSearchActive ? (
+              <Text color={Colors.AccentCyan}>(r): </Text>
+            ) : (
+              '! '
+            )
+          ) : (
+            '> '
+          )}
         </Text>
         <Box flexGrow={1} flexDirection="column">
           {buffer.text.length === 0 && placeholder ? (
@@ -439,7 +470,46 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
                 display = display + ' '.repeat(inputWidth - currentVisualWidth);
               }
 
-              if (visualIdxInRenderedSet === cursorVisualRow) {
+              // Color highlighting for reverse search
+              if (reverseSearchActive && shellModeActive) {
+                if (buffer.text && reverseSearchQuery) {
+                  // We have a matched command, highlight the search query within it
+                  const text = buffer.text;
+                  const queryLower = reverseSearchQuery.toLowerCase();
+                  const textLower = text.toLowerCase();
+                  const matchIndex = textLower.indexOf(queryLower);
+
+                  if (matchIndex !== -1) {
+                    const before = cpSlice(display, 0, matchIndex);
+                    const matched = cpSlice(
+                      display,
+                      matchIndex,
+                      matchIndex + reverseSearchQuery.length,
+                    );
+                    const after = cpSlice(
+                      display,
+                      matchIndex + reverseSearchQuery.length,
+                    );
+
+                    display =
+                      before + chalk.hex(Colors.AccentYellow)(matched) + after;
+                  } else {
+                    display = chalk.dim(display);
+                  }
+                } else if (reverseSearchQuery) {
+                  // No match found, show just the search query being typed
+                  display = chalk.hex(Colors.AccentGreen)(reverseSearchQuery);
+                } else {
+                  // No search query yet, show empty
+                  display = '';
+                }
+              }
+
+              // Apply cursor highlighting (but not during reverse search)
+              if (
+                visualIdxInRenderedSet === cursorVisualRow &&
+                !reverseSearchActive
+              ) {
                 const relativeVisualColForHighlight = cursorVisualColAbsolute;
                 if (relativeVisualColForHighlight >= 0) {
                   if (relativeVisualColForHighlight < cpLen(display)) {
@@ -462,29 +532,6 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
                   }
                 }
               }
-
-              // Color the search query in reverse search mode
-              if (reverseSearchActive && shellModeActive) {
-                if (buffer.text.length > reverseSearchQuery.length) {
-                  // Color the search part in cyan and the matched part in green
-                  const searchPart = cpSlice(
-                    display,
-                    0,
-                    reverseSearchQuery.length,
-                  );
-                  const matchedPart = cpSlice(
-                    display,
-                    reverseSearchQuery.length,
-                  );
-                  display =
-                    chalk.hex(Colors.AccentCyan)(searchPart) +
-                    chalk.hex(Colors.AccentGreen)(matchedPart);
-                } else {
-                  // Just the search query, color it yellow
-                  display = chalk.hex(Colors.AccentCyan)(display);
-                }
-              }
-
               return (
                 <Text key={`line-${visualIdxInRenderedSet}`}>{display}</Text>
               );
