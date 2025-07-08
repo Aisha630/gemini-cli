@@ -97,33 +97,44 @@ export function wrappedLineCount(text: string, width: number): number {
 }
 
 export function distributeWidth(widths: number[], toRemove: number): number[] {
-  if (toRemove <= 0 || widths.length === 0) {
-    return widths;
-  }
+  if (toRemove <= 0 || widths.length === 0) return widths;
+
+  const minimumWidth = 3;
+
+  const sortedCols = widths
+    .map((width, index) => ({ width, index }))
+    .sort((a, b) => a.width - b.width);
+
   const newWidths = [...widths];
-  const minimumWidth = 3; // so that each column has at least 1 (after removing padding)
+  let remaining = toRemove;
 
-  const availableReductions = newWidths.map((w) =>
-    Math.max(0, w - minimumWidth),
-  );
-  const totalAvailable = availableReductions.reduce(
-    (sum, reduction) => sum + reduction,
-    0,
-  );
+  for (let i = 0; i < sortedCols.length && remaining > 0; i++) {
+    const { index } = sortedCols[i];
+    const currentWidth = newWidths[index];
 
-  const actualToRemove = Math.min(toRemove, totalAvailable);
-
-  if (actualToRemove === 0) return newWidths;
-
-  for (let i = 0; i < newWidths.length; i++) {
-    if (availableReductions[i] > 0) {
-      const reduction = Math.floor(
-        (availableReductions[i] / totalAvailable) * actualToRemove,
+    let totalReducible = 0;
+    for (let j = i; j < sortedCols.length; j++) {
+      totalReducible += Math.max(
+        0,
+        newWidths[sortedCols[j].index] - minimumWidth,
       );
-      newWidths[i] -= reduction;
-      if ( newWidths[i]  > minimumWidth) {
-        newWidths[i] -= 1; // To account for flooring
-      }
+    }
+
+    if (totalReducible === 0) break;
+
+    const reducible = Math.max(0, currentWidth - minimumWidth);
+    const proportionalReduction = Math.floor(
+      (reducible / totalReducible) * remaining,
+    );
+    const targetWidth = currentWidth - proportionalReduction;
+
+    if (targetWidth < minimumWidth) {
+      const actualReduction = currentWidth - minimumWidth;
+      newWidths[index] = minimumWidth;
+      remaining -= actualReduction;
+    } else {
+      newWidths[index] = targetWidth;
+      remaining -= proportionalReduction;
     }
   }
 

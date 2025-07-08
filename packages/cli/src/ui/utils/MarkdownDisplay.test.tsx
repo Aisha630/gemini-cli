@@ -445,9 +445,10 @@ describe('Table Rendering Styles', () => {
     );
 
     const output = lastFrame();
-    // Should still render as a proper table
     expect(output).toContain('│');
     expect(output).toContain('─');
+    expect(output).toContain(' X ');
+    expect(output).toContain(' a ');
   });
 
   it('should properly wrap long text in table cells', () => {

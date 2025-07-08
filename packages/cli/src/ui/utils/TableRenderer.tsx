@@ -100,7 +100,7 @@ export const TableRenderer: React.FC<TableRendererProps> = ({
 
   const VerticalSeparator = React.memo(VerticalSeparatorInternal);
 
-  // Adding an extra blank line with height+1 on purpose since it looks better/easier to visuallyseparate cells in more dense tables
+  // Adding an extra blank line with height+1 on purpose since it looks better/easier to visually separate cells in more dense tables
   const renderRow = (cells: string[], height: number, isHeader = false) => (
     <Box flexDirection="row" height={height + 1}>
       <VerticalSeparator content="│ " rowHeight={height + 1} />
