@@ -137,7 +137,7 @@ export function useShellHistory(projectRoot: string) {
     const newIndex = matchingIndex - 1;
     if (newIndex < 0) {
       setMatchingIndex(-1);
-      return null;
+      return '';
     }
     setMatchingIndex(newIndex);
     return matchingCommands[newIndex] ?? null;

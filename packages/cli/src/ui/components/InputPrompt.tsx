@@ -324,6 +324,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
               const prevMatch = shellHistory.getNextMatchingCommand();
               if (prevMatch !== null) {
                 buffer.setText(prevMatch);
+                !prevMatch || setReverseSearchQuery(''); // Clear query if no match
               }
               return;
             }
@@ -341,11 +342,18 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
             }
 
             if (key.name === 'return') {
+              const command = buffer.text;
+
               setReverseSearchActive(false);
               setReverseSearchQuery('');
-              setOriginalBufferText('');
               shellHistory.resetMatching();
-              handleSubmitAndClear(buffer.text.trim());
+
+              if (command.trim()) {
+                setOriginalBufferText('');
+                handleSubmitAndClear(command);
+              } else {
+                buffer.setText(originalBufferText);
+              }
               return;
             }
 
