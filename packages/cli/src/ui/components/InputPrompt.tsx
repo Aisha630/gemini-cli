@@ -20,6 +20,28 @@ import { isAtCommand, isSlashCommand } from '../utils/commandUtils.js';
 import { CommandContext, SlashCommand } from '../commands/types.js';
 import { Config } from '@google/gemini-cli-core';
 
+function getHighlightedReverseSearchText(
+  display: string,
+  bufferText: string,
+  reverseSearchQuery: string,
+): string {
+  const queryLower = reverseSearchQuery.toLowerCase();
+  const textLower = bufferText.toLowerCase();
+  const matchIndex = textLower.indexOf(queryLower);
+
+  if (matchIndex !== -1) {
+    const before = cpSlice(display, 0, matchIndex);
+    const matched = cpSlice(
+      display,
+      matchIndex,
+      matchIndex + reverseSearchQuery.length,
+    );
+    const after = cpSlice(display, matchIndex + reverseSearchQuery.length);
+    return before + chalk.hex(Colors.AccentYellow)(matched) + after;
+  }
+  return chalk.dim(display);
+}
+
 export interface InputPromptProps {
   buffer: TextBuffer;
   onSubmit: (value: string) => void;
@@ -353,7 +375,6 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
             return;
           }
           if (key.name === 'down') {
-            shellHistory.resetMatching(); // Reset matching when going to normal down navigation
             const nextCommand = shellHistory.getNextCommand();
             if (nextCommand !== null) buffer.setText(nextCommand);
             return;
@@ -473,29 +494,11 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
               // Color highlighting for reverse search
               if (reverseSearchActive && shellModeActive) {
                 if (buffer.text && reverseSearchQuery) {
-                  // We have a matched command, highlight the search query within it
-                  const text = buffer.text;
-                  const queryLower = reverseSearchQuery.toLowerCase();
-                  const textLower = text.toLowerCase();
-                  const matchIndex = textLower.indexOf(queryLower);
-
-                  if (matchIndex !== -1) {
-                    const before = cpSlice(display, 0, matchIndex);
-                    const matched = cpSlice(
-                      display,
-                      matchIndex,
-                      matchIndex + reverseSearchQuery.length,
-                    );
-                    const after = cpSlice(
-                      display,
-                      matchIndex + reverseSearchQuery.length,
-                    );
-
-                    display =
-                      before + chalk.hex(Colors.AccentYellow)(matched) + after;
-                  } else {
-                    display = chalk.dim(display);
-                  }
+                  display = getHighlightedReverseSearchText(
+                    display,
+                    buffer.text,
+                    reverseSearchQuery,
+                  );
                 } else if (reverseSearchQuery) {
                   // No match found, show just the search query being typed
                   display = chalk.hex(Colors.AccentGreen)(reverseSearchQuery);

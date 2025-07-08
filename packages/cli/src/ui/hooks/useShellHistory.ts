@@ -131,7 +131,7 @@ export function useShellHistory(projectRoot: string) {
   }, [matchingCommands, matchingIndex]);
 
   const getNextMatchingCommand = useCallback((): string | null => {
-    if (matchingCommands.length === 0 || matchingIndex < 0) {
+    if (matchingCommands.length === 0) {
       return null;
     }
     const newIndex = matchingIndex - 1;
