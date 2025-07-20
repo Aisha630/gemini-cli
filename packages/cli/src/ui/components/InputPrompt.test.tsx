@@ -636,8 +636,21 @@ describe('InputPrompt', () => {
 
       unmount();
     });
+  });
 
-    describe('cursor-based completion trigger', () => {
+  it('should call inputHistory.navigateDown on down arrow in non-shell mode', async () => {
+    props.shellModeActive = false;
+    const { stdin, unmount } = render(<InputPrompt {...props} />);
+    await wait();
+
+    stdin.write('\u001B[B');
+    await wait();
+
+    expect(mockShellHistory.getNextCommand).not.toHaveBeenCalled();
+    unmount();
+  });
+
+  describe('cursor-based completion trigger', () => {
       it('should trigger completion when cursor is after @ without spaces', async () => {
         // Set up buffer state
         mockBuffer.text = '@src/components';
