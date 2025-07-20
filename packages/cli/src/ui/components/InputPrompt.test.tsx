@@ -97,10 +97,6 @@ describe('InputPrompt', () => {
       addCommandToHistory: vi.fn(),
       getPreviousCommand: vi.fn().mockReturnValue(null),
       getNextCommand: vi.fn().mockReturnValue(null),
-      getMatchingCommand: vi.fn().mockReturnValue(null),
-      getNextMatchingCommand: vi.fn().mockReturnValue(null),
-      getPreviousMatchingCommand: vi.fn().mockReturnValue(null),
-      resetMatching: vi.fn(),
       resetHistoryPosition: vi.fn(),
       history: [],
     };
