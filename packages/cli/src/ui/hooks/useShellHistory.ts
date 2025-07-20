@@ -20,11 +20,20 @@ async function getHistoryFilePath(projectRoot: string): Promise<string> {
 async function readHistoryFile(filePath: string): Promise<string[]> {
   try {
     const content = await fs.readFile(filePath, 'utf-8');
-    return content.split('\n').filter(Boolean);
+    return content.split(/\r?\n/).reduce<string[]>((acc, line) => {
+      const trimmed = line.trim();
+      if (!trimmed) return acc;
+
+      const lastIndex = acc.length - 1;
+      if (acc.length && acc[lastIndex].endsWith('\\')) {
+        acc[lastIndex] = acc[lastIndex].slice(0, -1) + ' ' + trimmed;
+      } else {
+        acc.push(trimmed);
+      }
+      return acc;
+    }, []);
   } catch (error) {
-    if (isNodeError(error) && error.code === 'ENOENT') {
-      return [];
-    }
+    if (isNodeError(error) && error.code === 'ENOENT') return [];
     console.error('Error reading shell history:', error);
     return [];
   }
@@ -94,10 +103,15 @@ export function useShellHistory(projectRoot: string) {
     return history[newIndex] ?? null;
   }, [history, historyIndex]);
 
+  const resetHistoryPosition = useCallback(() => {
+    setHistoryIndex(-1);
+  }, []);
+
   return {
+    history,
     addCommandToHistory,
     getPreviousCommand,
     getNextCommand,
-    resetHistoryPosition: () => setHistoryIndex(-1),
+    resetHistoryPosition,
   };
 }
