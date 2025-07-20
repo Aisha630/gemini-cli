@@ -362,6 +362,39 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         return;
       }
 
+      // Handle Reverse Search first (prioritize over regular completions)
+      if (reverseSearchActive) {
+        if (reverseSearchCompletion.showSuggestions) {
+          if (reverseSearchCompletion.suggestions.length > 1) {
+            if (key.name === 'up') {
+              reverseSearchCompletion.navigateUp();
+              return;
+            }
+            if (key.name === 'down') {
+              reverseSearchCompletion.navigateDown();
+              return;
+            }
+          }
+
+          if (key.name === 'tab') {
+            handleReverseSearchAutoComplete(
+              reverseSearchCompletion.activeSuggestionIndex,
+            );
+            return;
+          }
+          if (key.name === 'return' && !key.ctrl) {
+            handleSubmitAndClear(buffer.text);
+            reverseSearchCompletion.resetCompletionState();
+            setReverseSearchActive(false);
+            return;
+          }
+        }
+        // When in reverse search mode but no suggestions, don't fall through to regular completions
+        if (key.name === 'up' || key.name === 'down') {
+          return;
+        }
+      }
+
       // If the command is a perfect match, pressing enter should execute it.
       if (completion.isPerfectMatch && key.name === 'return') {
         handleSubmitAndClear(buffer.text);
@@ -421,39 +454,6 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
           return;
         }
       } else {
-        // Handle Reverse Search
-        if (reverseSearchActive) {
-          if (reverseSearchCompletion.showSuggestions) {
-            if (reverseSearchCompletion.suggestions.length > 1) {
-              if (key.name === 'up') {
-                reverseSearchCompletion.navigateUp();
-                return;
-              }
-              if (key.name === 'down') {
-                reverseSearchCompletion.navigateDown();
-                return;
-              }
-            }
-
-            if (key.name === 'tab') {
-              handleReverseSearchAutoComplete(
-                reverseSearchCompletion.activeSuggestionIndex,
-              );
-              return;
-            }
-            if (key.name === 'return' && !key.ctrl) {
-              handleSubmitAndClear(buffer.text);
-              reverseSearchCompletion.resetCompletionState();
-              setReverseSearchActive(false);
-              return;
-            }
-          }
-          // When in reverse search mode but no suggestions, don't fall through to shell history
-          if (key.name === 'up' || key.name === 'down') {
-            return;
-          }
-        }
-
         if (key.name === 'up') {
           const prevCommand = shellHistory.getPreviousCommand();
           if (prevCommand !== null) buffer.setText(prevCommand);

@@ -19,22 +19,29 @@ async function getHistoryFilePath(projectRoot: string): Promise<string> {
 
 async function readHistoryFile(filePath: string): Promise<string[]> {
   try {
-    const content = await fs.readFile(filePath, 'utf-8');
-    return content.split(/\r?\n/).reduce<string[]>((acc, line) => {
-      const trimmed = line.trim();
-      if (!trimmed) return acc;
+    const text = await fs.readFile(filePath, 'utf-8');
+    const result: string[] = [];
+    let cur = '';
 
-      const lastIndex = acc.length - 1;
-      if (acc.length && acc[lastIndex].endsWith('\\')) {
-        acc[lastIndex] = acc[lastIndex].slice(0, -1) + ' ' + trimmed;
+    for (const raw of text.split(/\r?\n/)) {
+      const line = raw.trim();
+      if (!line) continue;
+
+      const m = cur.match(/(\\+)$/);
+      if (m && m[1].length % 2) {
+        // odd number of trailing '\' → continuation
+        cur = cur.slice(0, -1).trimEnd() + ' ' + line;
       } else {
-        acc.push(trimmed);
+        if (cur) result.push(cur);
+        cur = line;
       }
-      return acc;
-    }, []);
-  } catch (error) {
-    if (isNodeError(error) && error.code === 'ENOENT') return [];
-    console.error('Error reading shell history:', error);
+    }
+
+    if (cur) result.push(cur);
+    return result;
+  } catch (err) {
+    if (isNodeError(err) && err.code === 'ENOENT') return [];
+    console.error('Error reading history:', err);
     return [];
   }
 }
