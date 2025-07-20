@@ -584,6 +584,59 @@ describe('InputPrompt', () => {
       unmount();
     });
 
+    it('should not activate reverse search on Ctrl+R when not in shell mode', async () => {
+      props.shellModeActive = false;
+      const { stdin, unmount } = render(<InputPrompt {...props} />);
+      await wait();
+
+      stdin.write('\x12');
+      await wait();
+
+      expect(mockedUseCompletion).not.toHaveBeenCalledWith(
+        expect.anything(),
+        expect.anything(),
+        true,
+        expect.anything(),
+        expect.anything(),
+        expect.anything(),
+        mockShellHistory.history,
+      );
+      unmount();
+    });
+
+    it('should prevent up/down arrow keys from navigating shell history when in reverse search', async () => {
+      const mockReverseSearchCompletion = {
+        ...mockCompletion,
+        showSuggestions: true,
+        suggestions: [
+          { label: 'git status', value: 'git status' },
+          { label: 'git commit', value: 'git commit' },
+        ],
+        navigateUp: vi.fn(),
+        navigateDown: vi.fn(),
+      };
+
+      mockedUseCompletion.mockReturnValueOnce(mockReverseSearchCompletion);
+
+      const { stdin, unmount } = render(<InputPrompt {...props} />);
+      await wait();
+
+      stdin.write('\x12');
+      await wait();
+
+      stdin.write('\u001B[A');
+      await wait();
+
+      expect(mockShellHistory.getPreviousCommand).not.toHaveBeenCalled();
+
+      stdin.write('\u001B[B');
+      await wait();
+
+      expect(mockShellHistory.getNextCommand).not.toHaveBeenCalled();
+
+      unmount();
+    });
+
     describe('cursor-based completion trigger', () => {
       it('should trigger completion when cursor is after @ without spaces', async () => {
         // Set up buffer state

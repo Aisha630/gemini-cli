@@ -265,17 +265,8 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
       }
       const suggestion = reverseSearchCompletion.suggestions[indexToUse].value;
       buffer.setText(suggestion);
-      reverseSearchCompletion.resetCompletionState();
-
-      setReverseSearchActive(false);
-      handleSubmitAndClear(suggestion);
     },
-    [
-      buffer,
-      reverseSearchCompletion,
-      setReverseSearchActive,
-      handleSubmitAndClear,
-    ],
+    [buffer, reverseSearchCompletion.suggestions],
   );
 
   // Handle clipboard image pasting with Ctrl+V
@@ -431,22 +422,34 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         }
       } else {
         // Handle Reverse Search
-        if (reverseSearchCompletion.showSuggestions) {
-          if (reverseSearchCompletion.suggestions.length > 1) {
-            if (key.name === 'up') {
-              reverseSearchCompletion.navigateUp();
+        if (reverseSearchActive) {
+          if (reverseSearchCompletion.showSuggestions) {
+            if (reverseSearchCompletion.suggestions.length > 1) {
+              if (key.name === 'up') {
+                reverseSearchCompletion.navigateUp();
+                return;
+              }
+              if (key.name === 'down') {
+                reverseSearchCompletion.navigateDown();
+                return;
+              }
+            }
+
+            if (key.name === 'tab') {
+              handleReverseSearchAutoComplete(
+                reverseSearchCompletion.activeSuggestionIndex,
+              );
               return;
             }
-            if (key.name === 'down') {
-              reverseSearchCompletion.navigateDown();
+            if (key.name === 'return' && !key.ctrl) {
+              handleSubmitAndClear(buffer.text);
+              reverseSearchCompletion.resetCompletionState();
+              setReverseSearchActive(false);
               return;
             }
           }
-
-          if (key.name === 'tab' || (key.name === 'return' && !key.ctrl)) {
-            handleReverseSearchAutoComplete(
-              reverseSearchCompletion.activeSuggestionIndex,
-            );
+          // When in reverse search mode but no suggestions, don't fall through to shell history
+          if (key.name === 'up' || key.name === 'down') {
             return;
           }
         }
@@ -568,9 +571,7 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
         >
           {shellModeActive ? (
             reverseSearchActive ? (
-              <Text color={Colors.AccentCyan}>(r): </Text>
-            ) : reverseSearchCompletion.showSuggestions ? (
-              <Text color={Colors.AccentCyan}>(search): </Text>
+              <Text color={Colors.AccentCyan}>(r:) </Text>
             ) : (
               '! '
             )
