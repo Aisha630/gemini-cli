@@ -1599,6 +1599,8 @@ export function useTextBuffer({
   const { visualLines, visualToLogicalMap } = visualLayout;
 
   const [visualScrollRow, setVisualScrollRow] = useState<number>(0);
+  // When true, viewport follows the cursor; when false, allow manual scrolling
+  const [followCursor, setFollowCursor] = useState<boolean>(true);
 
   useEffect(() => {
     if (onChange) {
@@ -1613,8 +1615,9 @@ export function useTextBuffer({
     });
   }, [viewport.width, viewport.height]);
 
-  // Update visual scroll (vertical)
+  // Update visual scroll (vertical) to follow cursor when enabled
   useEffect(() => {
+    if (!followCursor) return;
     const { height } = viewport;
     const totalVisualLines = visualLines.length;
     const maxScrollStart = Math.max(0, totalVisualLines - height);
@@ -1626,14 +1629,47 @@ export function useTextBuffer({
       newVisualScrollRow = visualCursor[0] - height + 1;
     }
 
-    // When the number of visual lines shrinks (e.g., after widening the viewport),
-    // ensure scroll never starts beyond the last valid start so we can render a full window.
     newVisualScrollRow = clamp(newVisualScrollRow, 0, maxScrollStart);
 
     if (newVisualScrollRow !== visualScrollRow) {
       setVisualScrollRow(newVisualScrollRow);
     }
-  }, [visualCursor, visualScrollRow, viewport, visualLines.length]);
+  }, [
+    followCursor,
+    visualCursor,
+    visualScrollRow,
+    viewport,
+    visualLines.length,
+  ]);
+
+  // Re-enable followCursor whenever the cursor moves explicitly
+  useEffect(() => {
+    setFollowCursor(true);
+  }, [cursorRow, cursorCol]);
+
+  const scrollByVisualLines = useCallback(
+    (delta: number): void => {
+      const maxStart = Math.max(
+        0,
+        visualLayout.visualLines.length - viewport.height,
+      );
+      setFollowCursor(false);
+      setVisualScrollRow((prev) => clamp(prev + delta, 0, maxStart));
+    },
+    [visualLayout.visualLines.length, viewport.height],
+  );
+
+  const scrollToVisualRow = useCallback(
+    (row: number): void => {
+      const maxStart = Math.max(
+        0,
+        visualLayout.visualLines.length - viewport.height,
+      );
+      setFollowCursor(false);
+      setVisualScrollRow(clamp(row, 0, maxStart));
+    },
+    [visualLayout.visualLines.length, viewport.height],
+  );
 
   const insert = useCallback(
     (ch: string, { paste = false }: { paste?: boolean } = {}): void => {
@@ -2066,6 +2102,8 @@ export function useTextBuffer({
       replaceRangeByOffset,
       moveToOffset,
       moveToVisualPosition,
+      scrollByVisualLines,
+      scrollToVisualRow,
       deleteWordLeft,
       deleteWordRight,
 
@@ -2130,6 +2168,8 @@ export function useTextBuffer({
       replaceRangeByOffset,
       moveToOffset,
       moveToVisualPosition,
+      scrollByVisualLines,
+      scrollToVisualRow,
       deleteWordLeft,
       deleteWordRight,
       killLineRight,
@@ -2285,6 +2325,14 @@ export interface TextBuffer {
   ) => void;
   moveToOffset(offset: number): void;
   moveToVisualPosition(visualRow: number, visualCol: number): void;
+  /**
+   * Scroll the visual viewport by a delta in visual lines without moving the cursor.
+   */
+  scrollByVisualLines: (delta: number) => void;
+  /**
+   * Scroll to an absolute visual row (top of viewport) without moving the cursor.
+   */
+  scrollToVisualRow: (row: number) => void;
 
   // Vim-specific operations
   /**

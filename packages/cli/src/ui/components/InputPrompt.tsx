@@ -41,6 +41,7 @@ import { useUIState } from '../contexts/UIStateContext.js';
 import { StreamingState } from '../types.js';
 import { isSlashCommand } from '../utils/commandUtils.js';
 import { useMouse, type MouseEvent } from '../contexts/MouseContext.js';
+import { useScrollable } from '../contexts/ScrollProvider.js';
 
 /**
  * Returns if the terminal can be trusted to handle paste events atomically
@@ -825,6 +826,22 @@ export const InputPrompt: React.FC<InputPromptProps> = ({
   const [cursorVisualRowAbsolute, cursorVisualColAbsolute] =
     buffer.visualCursor;
   const scrollVisualRow = buffer.visualScrollRow;
+
+  // Register the input area as a scrollable so mouse wheel scrolls it.
+  useScrollable(
+    {
+      ref: innerBoxRef as unknown as React.RefObject<DOMElement>,
+      getScrollState: () => ({
+        scrollTop: buffer.visualScrollRow,
+        scrollHeight: buffer.allVisualLines.length,
+        innerHeight: linesToRender.length,
+      }),
+      scrollBy: (delta: number) => buffer.scrollByVisualLines(delta),
+      hasFocus: () => focus && !isEmbeddedShellFocused && isShellFocused,
+      flashScrollbar: () => {},
+    },
+    true,
+  );
 
   const getGhostTextLines = useCallback(() => {
     if (
